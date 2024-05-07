@@ -11,7 +11,8 @@
     
    <!--Partie PHP insertion du nom et prenom-->
        <?php session_start(); ?>
-        <p> Bonjour, <?= $_SESSION['prenom']." ".$_SESSION['nom'] ?> </p>
+       <p> Bonjour, <?= isset($_SESSION['user']['prenom']) ? $_SESSION['user']['prenom'] : 'Utilisateur' ?> <?= isset($_SESSION['user']['nom']) ? $_SESSION['user']['nom'] : '' ?> </p>
+
     
     <!--Partie connexion a la page index-->
 
@@ -94,3 +95,4 @@
 
 </style>
 </html>
+

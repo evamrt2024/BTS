@@ -12,16 +12,6 @@ function initTableau() {
     colorCounter = 0; // Initialiser le compteur de coups à zéro
 }
 
-
-// Appeler la fonction d'initialisation une fois que le DOM est chargé
-document.addEventListener('DOMContentLoaded', initTableau);
-
-// Fonction pour mettre à jour les scores affichés dans le tableau HTML
-function updateScores() {
-    document.getElementById('scoreGreen').textContent = scores['green'];
-    document.getElementById('scoreRed').textContent = scores['red'];
-}
-
 // Appeler la fonction d'initialisation une fois que le DOM est chargé
 document.addEventListener('DOMContentLoaded', initTableau);
 
@@ -82,6 +72,12 @@ function resetTableau() {
     colorCounter = 0; // Réinitialise le compteur de cases remplies
 }
 
+// Fonction pour mettre à jour les scores affichés dans le tableau HTML
+function updateScores() {
+    document.getElementById('scoreGreen').textContent = scores['green'];
+    document.getElementById('scoreRed').textContent = scores['red'];
+}
+
 // Ajouter un événement de clic au bouton "Nouvelle partie"
 document.getElementById('nouvellePartie').addEventListener('click', nouvellePartie);
 
@@ -103,7 +99,7 @@ function resetGame() {
 function sendWinner(winner) {
     if (gameEnded) { // Vérifier si la partie est terminée
         var xhr = new XMLHttpRequest();
-        xhr.open('POST', 'enregistrement_partie.php', true);
+        xhr.open('POST', 'morpion.php', true);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         xhr.send('winner=' + winner);
     }

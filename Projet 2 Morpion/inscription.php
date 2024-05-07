@@ -1,4 +1,45 @@
+<?php
+include 'connect.php';
 
+// vérification de l'envoie du formulaire 
+
+if (!empty($_POST)){
+    // username = ce que le formulaire renvoie 
+
+    if(isset($_POST["name"],$_POST["lastname"],$_POST["login"], $_POST["password"])
+        && !empty($_POST["name"]) && !empty($_POST["lastname"]) && !empty($_POST["login"]) && !empty($_POST["password"]) )
+    {
+        // formulaire complet 
+
+        // protection des données 
+
+        $prenom = strip_tags($_POST["name"]);
+        $nom = strip_tags($_POST["lastname"]);
+
+        $login = strip_tags($_POST['login']);
+     
+
+                $userExists = $bdd->prepare("SELECT * FROM `user` WHERE login = ?");
+                
+                $count = $userExists->rowCount();
+                    if($count == 0){
+                        $password = strip_tags($_POST['password']);
+                        $nbCaractere = strlen($password);
+                            if($nbCaractere > 8){
+                                    $password = password_hash($password, PASSWORD_DEFAULT); 
+                                    $createUser = $bdd->prepare("INSERT INTO `user_Morpion`(`login`, `password`, `nom`, `prenom`) VALUES (?,?,?,?)");
+                                    $createUser->execute(array($login, $password, $nom, $prenom ));
+                                    header("Location: connexion");
+                            }else{
+                                $erreur = "Le mot de passe doit contenir 8 caractères au minimum !";
+                            }
+                    }else{
+                        $erreur = "Email et/ou nom d'utilisateur déja utilisé.";
+                        }
+    }
+}
+
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -15,34 +56,31 @@
 <body>
     <div class="log">
         <h2>Inscription</h2>
-    <form method="POST" action="insert_inscription.php" >
+    <form method="POST" >
 
     <div class="row">
     <div class="form-floating mb-3 mt-3 col">
-  <input type="text" class="form-control" id="nom" placeholder="Enter votre nom " name="nom">
-  <label >Nom</label>
-</div>
-    </div>
-
-    <div class="row">
-    <div class="form-floating mb-3 mt-3 col">
-  <input type="text" class="form-control" id="nom" placeholder="Enter votre prénom" name="prenom">
+  <input type="text" class="form-control" id="nom" placeholder="Enter votre prénom" name="name">
   <label >Prénom</label>
 </div>
-    </div>
 
-    <div class="row">
-    <div class="form-floating mb-3 mt-3 col">
-  <input type="text" class="form-control" id="nom" placeholder="Enter votre nom d'utilisateur" name="login">
-  <label >Login</label>
+<div class="form-floating mt-3 mb-3 col">
+  <input type="text" class="form-control" id="lastname" placeholder="Enter votre nom" name="lastname">
+  <label>Nom</label>
 </div>
+
     </div>
     
+    <div class="form-floating mb-3 mt-3">
+  <input type="text" class="form-control" placeholder="Enter nom d'utilisateur" name="login">
+  <label for="login">Nom d'utilisateur</label>
+</div>
+
 <div class="form-floating mb-3 mt-3">
     <input class="form-control" type="password" id="psw" name="password" 
         title="Doit contenir au moins un chiffre, une lettre majuscule et minuscule, et au moins 8 caractères ou plus" 
         required/>
-        <label for="pass">Mot de passe</label>
+        <label for="password">Mot de passe</label>
 </div>
 
 <div id="message">
@@ -53,6 +91,13 @@
         </div>
 
 <button type="submit" class="btn btn-outline-dark">S'inscrire</button>
+
+<?php  if(isset($erreur)){ ?>
+  <div class="alert alert-danger alert-dismissible">
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <strong> <?= $erreur; ?> </strong>
+  </div>
+<?php } ?>
 
     </form>
 
@@ -173,4 +218,5 @@ label{
     content: "✖  ";
   }
 </style>
+
 

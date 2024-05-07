@@ -1,53 +1,45 @@
 <?php
 session_start();
 
+
+require_once "./connect.php";
+
 if(isset($_SESSION["user"])){
     header('Location: index.php');
 }
 
-if(!empty($_POST)){
-    if(isset($_POST["login"], $_POST["pass"])
-        && !empty($_POST["login"] && !empty($_POST["pass"]))
-    ){
-        if(!filter_var($_POST["login"], FILTER_VALIDATE_EMAIL)){
-            $erreur = "ce n'est pas une adresse mail valide";
+try {
+    if(!empty($_POST)){
+        if(isset($_POST["login"], $_POST["password"]) && !empty($_POST["login"]) && !empty($_POST["password"])){
+            $login = $_POST["login"];
+            
+            $sql = "SELECT * FROM `user_Morpion` WHERE login = :login";
+            $query = $bdd->prepare($sql);
+            $query->execute(array(':login' => $login));
+    
+            $user = $query->fetch();
+    
+            if(!$user || !password_verify($_POST["password"], $user["password"])){
+                $erreur = "Email ou mot de passe incorrect";
+            } else {
+                $_SESSION["user"] = [
+                    "id" => $user["id_user"],
+                    "prenom" => $user["prenom"],
+                    "nom" => $user["nom"],
+                ];
+                // redirection vers la page
+                header("Location: index.php");
+                exit(); // Terminer le script après la redirection
+            }
+        } else {
+            $erreur = "Erreur de traitement";
         }
-
-        require_once "connect.php";
-
-        $sql = "SELECT * FROM user WHERE login = :logs ";
-
-        $query = $bdd->prepare($sql);
-
-        $query->bindValue(":logs", $_POST["login"]);
-
-        $query->execute();
-
-        $user = $query->fetch();
-
-
-        if(!$user){
-            $erreur = "Login ou mot de passe incorrect";
-        }
-
-        if(!password_verify($_POST["pass"], $user["password"])){
-            $erreur = "Login ou mot de passe incorrect t";
-        }else{
-             // on stock les informations de l'utilisateur 
-             $_SESSION["user"] = [
-                "id_user" => $user["id_user"],
-                "nom" => $user["nom"],
-                "prenom" => $user["prenom"]
-            ];
-
-            // redirection vers la page profil 
-            header("Location: morpion");
-        }
-
-    }else{
-        $erreur= "Champs manquant";
     }
+} catch(Exception $e) {
+    die($e->getMessage()); 
 }
+
+
 
 ?>
 <html lang="fr">
@@ -56,6 +48,7 @@ if(!empty($_POST)){
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion-accueil</title>
+   
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"></script>
 </head>
@@ -63,19 +56,19 @@ if(!empty($_POST)){
 
 <div class="log">
 <h2>Bienvenue</h2>
-<form method="post" action="connexion.php">
+<form method="post">
   
 <div class="row">
 <div class="col">
     <div class="form-floating mb-3 mt-3">
-    <input class="form-control" type="text" required name="login" placeholder="Entrez votre login">
-    <label for="email">Login</label>
+    <input class="form-control" type="text" value="<?php  if(isset($_POST['login'])){ echo $_POST['login'];} ?>" required name="login" placeholder="Entrez votre utilisateur">
+    <label for="login">login</label>
     </div>
     </div>
     <div class="col">
     <div class="form-floating mb-3 mt-3">
     <input  class="form-control" minlength="8" type="password" placeholder="Mot de passe" name="password" id="pass" required >
-    <label for="pass">Votre mot de passe</label>
+    <label for="password">Votre mot de passe</label>
     </div>
     </div>
 
@@ -88,6 +81,8 @@ if(!empty($_POST)){
 <?php } ?>
     <button class="btn btn-outline-success" type="submit" name="connexion">Connexion</button>
     <button onclick="window.location.href = 'inscription'" class="btn btn-outline-dark" type="button">S'inscrire</button>
+
+
 </form>
 </div>
 

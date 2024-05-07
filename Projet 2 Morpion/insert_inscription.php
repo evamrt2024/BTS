@@ -6,37 +6,42 @@ include 'connect.php';
 if (!empty($_POST)){
     // username = ce que le formulaire renvoie 
 
-    if(isset($_POST["nom"],$_POST["password"],$_POST["prenom"],$_POST["login"])
-        && !empty($_POST["nom"]) && !empty($_POST["password"]) && !empty($_POST["prenom"]) && !empty($_POST["login"]))
+    if(isset($_POST["name"],$_POST["lastname"],$_POST["login"], $_POST["password"])
+        && !empty($_POST["name"]) && !empty($_POST["lastname"]) && !empty($_POST["login"]) && !empty($_POST["password"]) )
     {
-       
-        // protection des données 
-        $login = $_POST["login"];
-        $password = hash('sha256',$_POST["password"]);
-        //$password=$_POST["password"];
-        $nom = $_POST["nom"];
-        $prenom = $_POST["prenom"];
-        $userExists = $bdd->prepare("SELECT * FROM user WHERE login = '".$login."' and password = '".$password."'");
-        $count = $userExists->rowCount();
-        if($count == 0){
-            $pass = strip_tags($_POST['password']);
-            $nbCaractere = strlen($pass);
-            if ($nbCaractere > 8){
-                $password = hash('sha256',$_POST["password"]);
-                $rq = "INSERT INTO user (login,password,nom,prenom) VALUES ('$login', '$password', '$nom', '$prenom')";
-                //print $rq;
-                $createUser = $bdd->prepare($rq);
-                //$createUser->execute(array('',$login, $password, $nom, $prenom,''));
-                $createUser->execute();
-                var_dump($createUser);
-                header("Location: connexion");
-            } else {
-                $erreur = "Le mot de passe doit contenir 8 caractères au minimum !";
-            }
-        } else {
-            $erreur = "Email et/ou nom d'utilisateur déja utilisé.";
-        }
+        // formulaire complet 
 
+        // protection des données 
+
+        $name = strip_tags($_POST["name"]);
+        $lastname = strip_tags($_POST["lastname"]);
+
+        $email = strip_tags($_POST['login']);
+     
+
+            if(filter_var($email, FILTER_VALIDATE_EMAIL)){
+
+                $userExists = $bdd->prepare("SELECT * FROM `user` WHERE login = ?");
+                
+                $count = $userExists->rowCount();
+                    if($count == 0){
+                        $password = strip_tags($_POST['password']);
+                        $nbCaractere = strlen($password);
+                            if($nbCaractere > 8){
+                                    $password = password_hash($pass, PASSWORD_DEFAULT); 
+                                    $createUser = $bdd->prepare("INSERT INTO `user`(`name_User`, `lastname_User`, `login_User`, `password_User`,) VALUES (?,?,?,?)");
+                                    $createUser->execute(array($name, $lastname, $login, $password ));
+                                    var_dump($createUser);
+                                    header("Location: connexion");
+                            }else{
+                                $erreur = "Le mot de passe doit contenir 8 caractères au minimum !";
+                            }
+                    }else{
+                        $erreur = "Email et/ou nom d'utilisateur déja utilisé.";
+                        }
+            }else{
+                $erreur = "Ce n'est pas une adresse mail valide ! ";
+            }
     }
 }
 
