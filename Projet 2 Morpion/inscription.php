@@ -91,7 +91,7 @@ if (!empty($_POST)){
         </div>
 
 <button type="submit" class="btn btn-outline-dark">S'inscrire</button>
-
+<button onclick="window.location.href = 'connexion'" class="btn btn-outline-success" type="button">Se connecter</button>
 <?php  if(isset($erreur)){ ?>
   <div class="alert alert-danger alert-dismissible">
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>

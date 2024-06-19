@@ -3,8 +3,8 @@
 
 session_start();
 
-if (isset($_SESSION['userId'])) {
-    $id = $_SESSION['userId'];
+if (isset($_SESSION['authTwoBite']['id'])) {
+    $id = $_SESSION['authTwoBite']['id'];
 } else {
     // L'utilisateur n'est pas connecté, redirigez-le vers la page de connexion par exemple
     header("Location: login.php");
@@ -14,7 +14,7 @@ if (isset($_SESSION['userId'])) {
 $db = include_once './include/Manage/db.php';
 
 
-$result = $db->prepare("SELECT * from user WHERE id_User = ?");
+$result = $db->prepare("SELECT * from user_menu WHERE id_User = ? ");
 $result->bind_param("i", $id);
 $result->execute();
 $res = $result->get_result();
@@ -27,8 +27,7 @@ foreach ($datas as $data) :
 
     if (isset($_POST['update'])) {
         if (!empty($_POST)) {
-            if (
-                isset($_POST["user"], $_POST["email"])
+            if (isset($_POST["user"], $_POST["email"])
                 && !empty($_POST["user"]) && !empty($_POST["email"])
             ) {
                 $pseudo = strip_tags($_POST["user"]);
@@ -36,12 +35,11 @@ foreach ($datas as $data) :
                 $lastname = strip_tags($_POST['lastname']);
                 $email = strip_tags($_POST["email"]);
 
-
-                    $update = $db->prepare("UPDATE `user` SET `username_User` = ?, `name_User` = ?, `lastname_User` = ?,`email_User` = ? WHERE id_User = ?");
-
-                    $update->execute(array($pseudo,$name, $lastname, $email, $id));
-                    $erreurProfil = "Votre profil a été modifié(e)";
-                    header("refresh:5;url=profil");
+                $update = $db->prepare("UPDATE `user_menu` SET `username_User` = ?, `name_User` = ?, `lastname_User` = ?, `email_User` = ? WHERE `id_User` = ?");
+                $update->bind_param("ssssi", $pseudo, $name, $lastname, $email, $id);
+                $update->execute();
+                $erreurProfil = "Votre profil a été modifié(e)";
+                header("refresh:4;url=profil");
             } else {
                 $erreurProfil = "formulaire incomplet";
             }

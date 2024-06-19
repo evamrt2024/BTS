@@ -5,13 +5,13 @@ require_once('./include/Manage/FavorisManager.php');
 session_start();
 
 // Vérifiez si l'utilisateur est connecté
-if (!isset($_SESSION['userId'])) {
+if (!isset($_SESSION['authTwoBite']['id'])) {
     header('Location: login.php'); // Rediriger vers la page de connexion
     exit();
 }
 
 // Obtenez l'ID de l'utilisateur à partir de la session
-$id_user = $_SESSION['userId'];
+$id_user = $_SESSION['authTwoBite']['id'];
 
 // Créez une instance de FavorisManager
 $favorisManager = new FavorisManager($conn);
@@ -61,7 +61,7 @@ $favoris = $favorisManager->getFavoris($id_user);
     <title>Favoris</title>
 </head>
 <body>
-<?php include('./include/includes/NavBar.html'); ?>
+<?php include('./include/includes/navbar.html'); ?>
     <div class="flex flex-row flex-wrap p-20 gap-8">
     <?php
     if (empty($favoris)) {
@@ -88,8 +88,9 @@ $favoris = $favorisManager->getFavoris($id_user);
                     <!-- <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">Here are the biggest enterprise technology acquisitions of 2021 so far, in reverse chronological order.</p> -->
 
                     <button class="favori-button bg-white z-50" onclick="supprimerFavori(<?= $recipe['id'] ?>)">
-                    <span id="coeur">&#10084;</span> Supprimer des favoris
+                        <span id="coeur">&#10084;</span> Supprimer des favoris
                     </button>
+
                     <br>
                     <button class="favori-button bg-white" onclick="window.location.href = 'menu.php?id=<?= $recipe['id'] ?>'">
                         Recette
@@ -104,19 +105,22 @@ $favoris = $favorisManager->getFavoris($id_user);
 
     ?>
 </div>
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 
-    <script>
-        function supprimerFavori(id_menu) {
-            // Utilisez Ajax pour appeler le script PHP qui supprime le menu des favoris
-            $.post('./include/fonction/supprimerFavori.php', { id_menu: id_menu }, function(data) {
-                // Rechargez la page après la suppression réussie
-                if (data.success) {
-                    location.reload();
-                }
-            }, 'json');
-        }
-    </script>
+<script>
+    function supprimerFavori(id_menu) {
+        $.post('./include/fonction/supprimerFavori.php', { id_menu: id_menu }, function(data) {
+            if (data.success) {
+                location.reload();
+            } else {
+                console.error('Erreur lors de la suppression du favori:', data.message);
+            }
+        }, 'json').fail(function(xhr, status, error) {
+            console.error('Erreur lors de la requête AJAX:', error);
+        });
+    }
+</script>
+
 
 </body>
 </html>

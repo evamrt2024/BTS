@@ -4,8 +4,8 @@ session_start();
 require('./include/Manage/db.php');
 include './include/Manage/FavorisManager.php';
 
-if (isset($_SESSION['userId'])) {
-    $userId = $_SESSION['userId'];
+if (isset($_SESSION['authTwoBite']['id'])) {
+    $id_user = $_SESSION['authTwoBite']['id'];
     // principale 66d055d8e2394a4c9dac91c1b30b8be0
   //secours 365477f7c21b4073846c6861571d4c3c
   //secours 2 : 9a727f334569449a8285ceec2a85c2c4
@@ -24,68 +24,92 @@ if (isset($_SESSION['userId'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Vérifier si l'utilisateur est connecté
-    if (!isset($_SESSION['userId'])) {
+    if (!isset($_SESSION['authTwoBite']['id'])) {
         http_response_code(403); // Accès interdit
         echo 'Accès interdit. Vous devez être connecté.';
         exit();
     }
 
     // Vérifier si les données POST nécessaires sont présentes
-    if (
-        !isset($_POST['id_menu']) || 
-        !isset($_POST['commentaire']) ||
-        !isset($_POST['note'])
-    ) {
+    if (!isset($_POST['id_menu']) || !isset($_POST['commentaire']) || !isset($_POST['note'])) {
         http_response_code(400); // Mauvaise requête
-        echo 'Données manquantes dans la requête.';
+        $resultAvis = 'Données manquantes dans la requête.';
         exit();
     }
 
-    $id_user = $_SESSION['userId'];
-    $id_menu = $_POST['id_menu'];
+    $id_menu = intval($_POST['id_menu']);
     $commentaire = trim(htmlspecialchars($_POST['commentaire'], ENT_QUOTES, 'UTF-8'));
     $note = intval($_POST['note']);
+    $id_user = $_SESSION['authTwoBite']['id']; // Utilisez l'ID de l'utilisateur connecté
 
     // Vérifier si les données ne sont pas vides
     if (empty($id_menu) || empty($commentaire) || empty($note)) {
         http_response_code(400); // Mauvaise requête
-        echo 'Les données ne peuvent pas être vides.';
+        $resultAvis = 'Les données ne peuvent pas être vides.';
         exit();
     }
 
     // Vérifier la validité de la note (entre 1 et 5, par exemple)
     if ($note < 1 || $note > 5) {
         http_response_code(400); // Mauvaise requête
-        echo 'La note doit être comprise entre 1 et 5.';
+        $resultAvis = 'La note doit être comprise entre 1 et 5.';
+        exit();
+    }
+
+    // Inclure le fichier de connexion à la base de données
+    include_once './include/Manage/db.php';
+
+    // Vérifiez si la connexion à la base de données est réussie
+    if ($conn === false) {
+        http_response_code(500); // Erreur interne du serveur
+        echo 'Erreur de connexion à la base de données.';
         exit();
     }
 
     // Préparer la requête SQL en utilisant des déclarations préparées pour éviter les injections SQL
-    $query = "INSERT INTO avis (id_menu, id_user, commentaire, note) VALUES (?, ?, ?, ?)";
+    $query = "INSERT INTO avis_menu (id_menu, id_user, commentaire, note) VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("iiss", $id_menu, $id_user, $commentaire, $note);
+
+    // Vérifiez si la préparation de la requête a réussi
+    if (!$stmt) {
+        http_response_code(500); // Erreur interne du serveur
+        $resultAvis = 'Erreur lors de la préparation de la requête : ' . $conn->error;
+        exit();
+    }
+
+    // Lier les paramètres
+    $stmt->bind_param("iisi", $id_menu, $id_user, $commentaire, $note);
 
     // Exécuter la requête
     if ($stmt->execute()) {
         http_response_code(201); // Créé avec succès
-        echo 'Avis ajouté avec succès.';
+        $resultAvis = 'Avis ajouté avec succès.';
     } else {
         http_response_code(500); // Erreur interne du serveur
-        echo 'Erreur lors de l\'ajout de l\'avis.';
+        $resultAvis = 'Erreur lors de l\'ajout de l\'avis : ' . $stmt->error;
     }
 
+    // Fermer la déclaration et la connexion
     $stmt->close();
 }
 
 // Récupérez les avis pour ce menu + le nom d'utilisateur de la personne ayant ajouté l'avis
-$query = "SELECT avis.*, user.username_User as pseudo FROM avis JOIN user ON avis.id_user = user.id_User WHERE id_menu = ?";
+// Vérification de la connexion à la base de données
+if (!$conn) {
+    die('Erreur de connexion à la base de données : ' . mysqli_connect_error());
+}
+
+// Récupération des avis pour ce menu + le nom d'utilisateur de la personne ayant ajouté l'avis
+$query = "SELECT avis_menu.*, user_menu.username_User as pseudo FROM avis_menu JOIN user_menu ON avis_menu.id_user = user_menu.id_User WHERE id_menu = ?";
 $stmt = $conn->prepare($query);
+if (!$stmt) {
+    die('Erreur de préparation de la requête : ' . $conn->error);
+}
 $stmt->bind_param("i", $id_menu);
 $stmt->execute();
 $result = $stmt->get_result();
 $avis = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
-
 
 // // Vérifier si l'ID du menu est présent dans l'URL
 if (isset($_GET['id'])) {
@@ -117,7 +141,7 @@ if (isset($_GET['id'])) {
             
         </head>
         <body class="bg-gray-100">
-        <?php include('./include/includes/NavBar.html'); ?>
+        <?php include('./include/includes/navbar.html'); ?>
 
 
 
@@ -141,6 +165,7 @@ if (isset($_GET['id'])) {
         <?php endif; ?>
     </div>
 </div>
+
 
 <!-- Affichage des détails de la recette -->
 <div class="mx-auto max-w-2xl px-4 pb-16 pt-10 sm:px-6 lg:grid lg:max-w-7xl lg:grid-cols-3 lg:grid-rows-[auto,auto,1fr] lg:gap-x-8 lg:px-8 lg:pb-24 lg:pt-16">
@@ -169,16 +194,22 @@ if (isset($_GET['id'])) {
 
                 // Appel de la méthode getFavoris pour obtenir la liste des favoris de l'utilisateur
                 $favorisManager = new FavorisManager($conn); // Spécifiez votre connexion à la base de données ici
-                $favorisUtilisateur = $favorisManager->getFavoris($userId);
+                $favorisUtilisateur = $favorisManager->getFavoris($id_user);
 
                 // Vérifier si le menu actuel est déjà un favori pour cet utilisateur
                 $estFavori = in_array($id_menu, $favorisUtilisateur);
+                $favorisManager = new FavorisManager($conn);
 
+                if ($favorisManager->ajouterFavori($id_user, $id_menu)) {
+                    echo json_encode(['success' => true]);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Erreur lors de l\'ajout aux favoris.']);
+                }
 
 ?>
 
         <!-- Bouton "Ajouter au favoris" -->
-        <button class="mt-10 flex w-full items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 z-50" onclick="ajouterFavori(<?= $recetteData['id']; ?>)">Ajouter aux favoris</button>
+        <button class="mt-10 flex w-full items-center justify-center rounded-md border border-transparent bg-indigo-600 px-8 py-3 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none z-50 favori-button" onclick="ajouterFavori(<?= $recetteData['id']; ?>)">Ajouter aux favoris</button>
 
     </div>
 
@@ -221,8 +252,8 @@ if (isset($_GET['id'])) {
 
     
 <!-- Afficher les avis -->
-<div>
-    <h2 class="text-lg font-semibold mb-4">Commentaire sur </h2>
+<div id="commentaire">
+    <h2 class="text-lg font-semibold mb-4">Commentaire</h2>
     <?php if (!empty($avis)) : ?>
       <ul role="list" class="divide-y divide-gray-200">
         <?php foreach ($avis as $avisItem) : ?>
@@ -235,7 +266,7 @@ if (isset($_GET['id'])) {
                     </div>
                 </div>
                 <div class="hidden md:block ml-4">
-                    <p class="text-sm leading-6 text-gray-900"><?= $avisItem['note']; ?></p>
+                    <p class="text-sm leading-6 text-gray-900"><?= $avisItem['note']; ?> / 5</p>
                 </div>
             </li>
         <?php endforeach; ?>   
@@ -248,7 +279,7 @@ if (isset($_GET['id'])) {
 <!-- Formulaire pour ajouter un avis -->
 <div class="mt-8">
     <h2 class="text-lg font-semibold mb-4">Laisser un commentaire</h2>
-    <form method="post" class="space-y-4">
+    <form method="post" class="space-y-4 py-4">
         <input type="hidden" name="id_menu" value="<?= $id_menu; ?>">
         <label for="commentaire" class="block text-sm font-medium leading-5 text-gray-700">Commentaire :</label>
         <textarea name="commentaire" id="commentaire" rows="4" required class="block w-full rounded-md shadow-sm transition duration-150 ease-in-out sm:text-sm sm:leading-5"></textarea>
@@ -256,6 +287,50 @@ if (isset($_GET['id'])) {
         <input type="number" name="note" id="note" min="1" max="5" required class="block w-20 rounded-md shadow-sm transition duration-150 ease-in-out sm:text-sm sm:leading-5">
         <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm leading-5 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:border-indigo-700 focus:shadow-outline-indigo active:bg-indigo-700 transition duration-150 ease-in-out">Soumettre l'avis</button>
     </form>
+    <p>
+        <?php
+            if (isset($resultAvis) && $resultAvis === 'Avis ajouté avec succès.'){
+                ?>
+    <div id="toast-success" class="flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800" role="alert">
+    <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-100 rounded-lg dark:bg-green-800 dark:text-green-200">
+        <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
+        </svg>
+        <span class="sr-only">Check icon</span>
+    </div>
+    <div class="ms-3 text-sm font-normal"><?= $resultAvis; ?></div>
+    <button type="button" class="ms-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700" data-dismiss-target="#toast-success" aria-label="Close">
+        <span class="sr-only">Close</span>
+        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+        </svg>
+    </button>
+</div>
+                <?php
+            }elseif(isset($resultAvis)){
+                ?>
+<div id="toast-danger" class="flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-800" role="alert">
+    <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-red-500 bg-red-100 rounded-lg dark:bg-red-800 dark:text-red-200">
+        <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 11.793a1 1 0 1 1-1.414 1.414L10 11.414l-2.293 2.293a1 1 0 0 1-1.414-1.414L8.586 10 6.293 7.707a1 1 0 0 1 1.414-1.414L10 8.586l2.293-2.293a1 1 0 0 1 1.414 1.414L11.414 10l2.293 2.293Z"/>
+        </svg>
+        <span class="sr-only">Error icon</span>
+    </div>
+    <div class="ms-3 text-sm font-normal"><?= $resultAvis; ?></div>
+    <button type="button" class="ms-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700" data-dismiss-target="#toast-danger" aria-label="Close">
+        <span class="sr-only">Close</span>
+        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+        </svg>
+    </button>
+</div>
+
+<?php
+            }else{
+                echo "";
+            }
+        ?>
+    </p>
 </div>
 
 
@@ -281,13 +356,6 @@ if (isset($_GET['id'])) {
 
 
 
-
-
-
-
-
-
-
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <script>
 function ajouterFavori(id_menu) {
@@ -298,9 +366,13 @@ function ajouterFavori(id_menu) {
         type: 'POST',
         data: { id_menu: id_menu },
         success: function(response) {
-            // Changez l'icône du cœur en fonction de l'état du favori
-            var isFavori = favoriButton.getAttribute('data-favori') === 'true';
-            favoriButton.setAttribute('data-favori', isFavori ? 'false' : 'true');
+            if (response.success) {
+                var isFavori = favoriButton.getAttribute('data-favori') === 'true';
+                favoriButton.setAttribute('data-favori', isFavori ? 'false' : 'true');
+                favoriButton.textContent = isFavori ? 'Ajouter aux favoris' : 'Supprimer des favoris';
+            } else {
+                console.error('Erreur lors de l\'ajout ou de la suppression des favoris :', response.message);
+            }
         },
         error: function(error) {
             console.error('Erreur lors de l\'ajout ou de la suppression des favoris :', error);

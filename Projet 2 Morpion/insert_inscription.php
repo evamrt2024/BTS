@@ -21,7 +21,7 @@ if (!empty($_POST)){
 
             if(filter_var($email, FILTER_VALIDATE_EMAIL)){
 
-                $userExists = $bdd->prepare("SELECT * FROM `user` WHERE login = ?");
+                $userExists = $bdd->prepare("SELECT * FROM `user_Morpion` WHERE login = ?");
                 
                 $count = $userExists->rowCount();
                     if($count == 0){
@@ -29,7 +29,7 @@ if (!empty($_POST)){
                         $nbCaractere = strlen($password);
                             if($nbCaractere > 8){
                                     $password = password_hash($pass, PASSWORD_DEFAULT); 
-                                    $createUser = $bdd->prepare("INSERT INTO `user`(`name_User`, `lastname_User`, `login_User`, `password_User`,) VALUES (?,?,?,?)");
+                                    $createUser = $bdd->prepare("INSERT INTO `user_Morpion`(`name_User`, `lastname_User`, `login_User`, `password_User`,) VALUES (?,?,?,?)");
                                     $createUser->execute(array($name, $lastname, $login, $password ));
                                     var_dump($createUser);
                                     header("Location: connexion");

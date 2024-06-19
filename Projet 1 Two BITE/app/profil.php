@@ -12,7 +12,7 @@ if (isset($_SESSION['userId'])) {
 $db = include_once './include/Manage/db.php';
 
 
-$result = $db->prepare("SELECT * FROM user WHERE id_User = ?");
+$result = $db->prepare("SELECT * FROM user_menu WHERE id_User = ?");
 $result->bind_param("i", $id); // Liage des paramètres
 $result->execute(); // Exécution de la requête
 $datas = $result->get_result()->fetch_all(MYSQLI_ASSOC); // Récupération des résultats

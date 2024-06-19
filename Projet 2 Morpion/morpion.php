@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 if (isset($_SESSION["user"])) {
     $fk_id_user = $_SESSION["user"]["id"];
     // Récupérer les scores vert et rouge de l'utilisateur connecté
-    $sql = "SELECT SUM(nb_victoire) as total_victoire, couleur FROM partie WHERE fk_id_user = :fk_id_user GROUP BY couleur";
+    $sql = "SELECT SUM(nb_victoire) as total_victoire, couleur FROM partie_Morpion WHERE fk_id_user = :fk_id_user GROUP BY couleur";
     $stmt = $bdd->prepare($sql);
     $stmt->execute([':fk_id_user' => $_SESSION["user"]["id"]]);
     $scores = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -105,11 +105,15 @@ if (isset($_SESSION["user"])) {
             <td></td>
         </tr>
     </table>
+
+    
+
+    <div class="container">
     <p>Score vert : <span id="scoreGreen"><?= $scoreGreen ?></span></p>
     <p>Score rouge : <span id="scoreRed"><?= $scoreRed ?></span></p>
-    <button id="nouvellePartie">Nouvelle partie</button>
+    <button id="nouvellePartie" style="background-color: green;">Nouvelle partie</button>
+    <button onclick="window.location.href = 'deconnexion.php'" style="background-color: red;">Se déconnecter</button>
+    </div>
     <script src="script.js"></script>
-
-    <button onclick="window.location.href = 'deconnexion.php'">Se déconnecter</button>
 </body>
 </html>

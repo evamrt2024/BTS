@@ -24,7 +24,7 @@ class User {
 
 
         // Vérifier si l'utilisateur existe déjà avec cette adresse e-mail ou ce nom d'utilisateur
-        $stmtCheck = $this->db->prepare("SELECT id_User FROM `user` WHERE email_User = ? OR username_User = ?");
+        $stmtCheck = $this->db->prepare("SELECT id_User FROM `user_menu` WHERE email_User = ? OR username_User = ?");
         $stmtCheck->bind_param("ss", $email, $username);
         $stmtCheck->execute();
         $stmtCheck->store_result();
@@ -42,7 +42,7 @@ class User {
                 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
                 $createdAt = date('Y-m-d H:i:s'); // Date actuelle au format MySQL
 
-                $stmtInsert = $this->db->prepare("INSERT INTO `user` (`username_User`, `name_User`, `lastname_User`, `email_User`, `password_User`, `created_at`) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmtInsert = $this->db->prepare("INSERT INTO `user_menu` (`username_User`, `name_User`, `lastname_User`, `email_User`, `password_User`, `created_at`) VALUES (?, ?, ?, ?, ?, ?)");
                     if ($stmtInsert) {
                         $stmtInsert->bind_param("ssssss", $username, $name, $lastname, $email, $hashedPassword, $createdAt);
                         $stmtInsert->execute();
@@ -77,23 +77,35 @@ class User {
 }
     
 
-    public function login($username, $password) {
-        $stmt = $this->db->prepare("SELECT `id_User`, `password_User` FROM `user` WHERE `username_User` = ? OR `email_User` = ?");
-        $stmt->bind_param("ss", $username, $username);
-        $stmt->execute();
-        $stmt->bind_result($id, $hashedPassword);
-        $stmt->fetch();
-        $stmt->close();
+public function login($username, $password) {
+    $stmt = $this->db->prepare("SELECT `id_User`, `password_User`, `username_User`, `name_User` FROM `user_menu` WHERE `username_User` = ? OR `email_User` = ?");
+    $stmt->bind_param("ss", $username, $username);
+    $stmt->execute();
+    $stmt->bind_result($id, $hashedPassword, $username, $name);
+    $stmt->fetch();
+    $stmt->close();
 
-        if ($hashedPassword !== null && password_verify($password, $hashedPassword)) {
-            session_start(); // Démarrer la session
-            $_SESSION['userId'] = $id; // Stocker l'ID de l'utilisateur
-            $_SESSION['username_User'] = $username;
-            $_SESSION['name_User'] = $name;
-            setcookie('user_id', $id, time() + (86400 * 30), "/"); // Cookie valide pendant 30 jours
-            return ['success' => true, 'message' => 'Connexion réussie.'];
+    if ($hashedPassword !== null && password_verify($password, $hashedPassword)) {
+        // Vérifier si la session est déjà démarrée
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
         }
+
+        // Stocker les informations de l'utilisateur dans un tableau associatif
+        $_SESSION['authTwoBite'] = [
+            'id' => $id,
+            'username' => $username,
+            'name' => $name,
+        ];
+
+        // Définir le domaine et le protocole pour le cookie
+        $domain = ($_SERVER['HTTP_HOST'] != 'localhost') ? $_SERVER['HTTP_HOST'] : false;
+        $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') ? true : false;
+        // Stocker le jeton dans le cookie
+        setcookie('user_id', $id, time() + (86400 * 30), "/"); // Cookie valide pendant 30 jours
+        return ['success' => true, 'message' => 'Connexion réussie.'];
     }
+}
 
     public function logout() {
         unset($_SESSION["userId"]);

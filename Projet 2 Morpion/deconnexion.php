@@ -10,7 +10,7 @@ if (isset($_SESSION["user"])) {
     session_destroy();
 
     // Redirection vers la page de connexion ou une autre page
-    header("Location: connexion.php");
+    header("Location: index.php");
     exit();
 } else {
     // Redirection vers la page de connexion si l'utilisateur n'est pas connecté
